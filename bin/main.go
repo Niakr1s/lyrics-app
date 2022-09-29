@@ -112,18 +112,7 @@ func printSeparator() {
 	fmt.Printf("-----\n")
 }
 
-func main() {
-	args := getArgs()
-	settings, err := makeSettings(args)
-	if err != nil {
-		log.Fatalf("%v\n", err)
-	}
-
-	settings.PrintInfo()
-
-	printSeparator()
-	fmt.Printf("Start lyrics search\n")
-
+func doJob(settings Settings) error {
 	for _, musicFilePath := range settings.MusicFilePaths {
 		fmt.Printf("Start search lyrics for %s\n", musicFilePath)
 
@@ -135,7 +124,25 @@ func main() {
 			fmt.Printf("Lyrics found, len=%d: %s\n", len(lyrics), musicFilePath)
 		}
 	}
+	return nil
+}
 
-	fmt.Printf("End lyrics search\n")
+func main() {
+	args := getArgs()
+	settings, err := makeSettings(args)
+	if err != nil {
+		log.Fatalf("%v\n", err)
+	}
+
+	settings.PrintInfo()
+
+	printSeparator()
+	fmt.Printf("Start\n")
+
+	if err := doJob(settings); err != nil {
+		log.Fatalf("%v\n", err)
+	}
+
+	fmt.Printf("End\n")
 	printSeparator()
 }
