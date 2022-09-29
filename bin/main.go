@@ -113,7 +113,14 @@ func printSeparator() {
 	fmt.Printf("-----\n")
 }
 
+type MetadataWriter interface {
+	// should return output file path or error
+	WriteMetadata(musicFilePath string, meta map[string]string) (string, error)
+}
+
 func doJob(settings Settings) error {
+	var metadataWriter MetadataWriter = lib.NewFfmpegMetadataWriter(settings.FfmpegCmd)
+
 	wg := sync.WaitGroup{}
 	for _, musicFilePath := range settings.MusicFilePaths {
 		musicFilePath := musicFilePath
@@ -129,6 +136,33 @@ func doJob(settings Settings) error {
 				fmt.Printf("Lyrics not found, reason: %v: %s\n", err, musicFilePath)
 			} else {
 				fmt.Printf("Lyrics found, len=%d: %s\n", len(lyrics), musicFilePath)
+				if settings.Simulate {
+					return
+				}
+
+				outputFilePath, err := metadataWriter.WriteMetadata(musicFilePath, map[string]string{
+					"Lyrics": lyrics,
+				})
+				defer os.Remove(outputFilePath) // just clean at the end
+
+				if err != nil {
+					fmt.Printf("Couldn't write metadata, reason: %v: %v\n", err, musicFilePath)
+					return
+				}
+
+				err = os.Remove(musicFilePath)
+				if err != nil {
+					fmt.Printf("Couldn't remove file, reason: %v: %v\n", err, musicFilePath)
+					return
+				}
+
+				err = os.Rename(outputFilePath, musicFilePath)
+				if err != nil {
+					fmt.Printf("Couldn't rename file, reason: %v: %v\n", err, outputFilePath)
+					return
+				}
+
+				fmt.Printf("Metadata write success: %v\n", musicFilePath)
 			}
 		}()
 	}
