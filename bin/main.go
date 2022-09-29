@@ -73,7 +73,7 @@ func makeSettings(args Args) (Settings, error) {
 	res.InputFiles = lib.FilterMusicFiles(res.InputFiles)
 
 	// checking ffmpeg
-	ffmpegCmds := []string{"ffmpeg", "ffmpeg.exe"}
+	ffmpegCmds := []string{args.FfmpegPath, "ffmpeg", "ffmpeg.exe"}
 	for _, ffmpegCmd := range ffmpegCmds {
 		err := exec.Command(ffmpegCmd, "-h").Run()
 		if err == nil {
