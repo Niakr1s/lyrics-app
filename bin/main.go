@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 
 	"github.com/niakr1s/lyricsgo/lib"
 )
@@ -107,6 +108,10 @@ func makeSettings(args Args) (Settings, error) {
 	return res, nil
 }
 
+func printSeparator() {
+	fmt.Printf("-----\n")
+}
+
 func main() {
 	args := getArgs()
 	settings, err := makeSettings(args)
@@ -115,4 +120,22 @@ func main() {
 	}
 
 	settings.PrintInfo()
+
+	printSeparator()
+	fmt.Printf("Start lyrics search\n")
+
+	for _, musicFilePath := range settings.InputFiles {
+		fmt.Printf("Start search lyrics for %s\n", musicFilePath)
+
+		query := path.Base(musicFilePath)
+		lyrics, err := lib.GetLyrics(query)
+		if err != nil {
+			fmt.Printf("Lyrics not found, reason: %v: %s\n", err, musicFilePath)
+		} else {
+			fmt.Printf("Lyrics found, len=%d: %s\n", len(lyrics), musicFilePath)
+		}
+	}
+
+	fmt.Printf("End lyrics search\n")
+	printSeparator()
 }
