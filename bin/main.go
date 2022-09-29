@@ -38,15 +38,15 @@ func getArgs() Args {
 
 type Settings struct {
 	// needed to check
-	InputFiles []string
-	FfmpegCmd  string
+	MusicFilePaths []string
+	FfmpegCmd      string
 
 	Simulate bool
 }
 
 func (s Settings) PrintInfo() {
-	fmt.Printf("Got input: %d music files:\n", len(s.InputFiles))
-	for _, musicFilePath := range s.InputFiles {
+	fmt.Printf("Got input: %d music files:\n", len(s.MusicFilePaths))
+	for _, musicFilePath := range s.MusicFilePaths {
 		fmt.Printf("\t%s\n", musicFilePath)
 	}
 	fmt.Printf("Found ffmpeg in %s\n", s.FfmpegCmd)
@@ -62,9 +62,9 @@ func (s Settings) PrintInfo() {
 // Checks if app is ready to go. If has some troubles, panics.
 func makeSettings(args Args) (Settings, error) {
 	res := Settings{
-		InputFiles: []string{},
-		FfmpegCmd:  "",
-		Simulate:   args.Simulate,
+		MusicFilePaths: []string{},
+		FfmpegCmd:      "",
+		Simulate:       args.Simulate,
 	}
 	var err error
 
@@ -77,16 +77,16 @@ func makeSettings(args Args) (Settings, error) {
 		return res, fmt.Errorf("couldn't get stat of input path %s: %v", args.InputPath, err)
 	}
 	if stat.Mode().IsRegular() {
-		res.InputFiles = []string{args.InputPath}
+		res.MusicFilePaths = []string{args.InputPath}
 	} else if stat.Mode().IsDir() {
-		res.InputFiles, err = lib.GetAllFilesFromDir(args.InputPath, args.Recoursive)
+		res.MusicFilePaths, err = lib.GetAllFilesFromDir(args.InputPath, args.Recoursive)
 		if err != nil {
 			return res, err
 		}
 	} else {
 		return res, fmt.Errorf("input path %s is nor regular file, nor directory", args.InputPath)
 	}
-	res.InputFiles = lib.FilterMusicFiles(res.InputFiles)
+	res.MusicFilePaths = lib.FilterMusicFiles(res.MusicFilePaths)
 
 	// checking ffmpeg
 	ffmpegCmds := []string{args.FfmpegPath, "ffmpeg", "ffmpeg.exe"}
@@ -124,7 +124,7 @@ func main() {
 	printSeparator()
 	fmt.Printf("Start lyrics search\n")
 
-	for _, musicFilePath := range settings.InputFiles {
+	for _, musicFilePath := range settings.MusicFilePaths {
 		fmt.Printf("Start search lyrics for %s\n", musicFilePath)
 
 		query := path.Base(musicFilePath)
