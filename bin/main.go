@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/niakr1s/lyricsgo/src/fs"
+	"github.com/niakr1s/lyricsgo/lib"
 )
 
 // command line args
@@ -52,7 +52,7 @@ func makeSettings(args Args) (Settings, error) {
 	}
 	var err error
 
-	args.InputPath, err = fs.ToAbs(args.InputPath)
+	args.InputPath, err = lib.ToAbs(args.InputPath)
 	if err != nil {
 		return res, err
 	}
@@ -63,14 +63,14 @@ func makeSettings(args Args) (Settings, error) {
 	if stat.Mode().IsRegular() {
 		res.InputFiles = []string{args.InputPath}
 	} else if stat.Mode().IsDir() {
-		res.InputFiles, err = fs.GetAllFilesFromDir(args.InputPath, args.Recoursive)
+		res.InputFiles, err = lib.GetAllFilesFromDir(args.InputPath, args.Recoursive)
 		if err != nil {
 			return res, err
 		}
 	} else {
 		return res, fmt.Errorf("input path %s is nor regular file, nor directory", args.InputPath)
 	}
-	res.InputFiles = fs.FilterMusicFiles(res.InputFiles)
+	res.InputFiles = lib.FilterMusicFiles(res.InputFiles)
 
 	// checking ffmpeg
 	ffmpegCmds := []string{"ffmpeg", "ffmpeg.exe"}

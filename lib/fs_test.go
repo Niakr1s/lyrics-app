@@ -1,4 +1,4 @@
-package fs
+package lib
 
 import (
 	"path"
@@ -16,10 +16,10 @@ func TestToAbs(t *testing.T) {
 		wantSuffix string
 		wantErr    bool
 	}{
-		{"empty", args{""}, "lyrics-app/src/fs", false},
-		{"current", args{"."}, "lyrics-app/src/fs", false},
-		{"test", args{"test"}, "lyrics-app/src/fs/test", false},
-		{"up", args{"../test"}, "lyrics-app/src/test", false},
+		{"empty", args{""}, "lyrics-app/lib", false},
+		{"current", args{"."}, "lyrics-app/lib", false},
+		{"test", args{"test"}, "lyrics-app/lib/test", false},
+		{"up", args{"../test"}, "lyrics-app/test", false},
 		{"root", args{"/test"}, "/test", false},
 	}
 	for _, tt := range tests {
@@ -50,13 +50,13 @@ func TestGetAllFilesFromDir(t *testing.T) {
 		wantSize int
 		wantErr  bool
 	}{
-		{"non-recoursive test", args{"../../test", false}, 3, false},
-		{"non-recoursive subdir", args{"../../test/subdir", false}, 6, false},
-		{"non-recoursive error", args{"../../test/error", false}, 0, true},
+		{"non-recoursive test", args{"../test", false}, 3, false},
+		{"non-recoursive subdir", args{"../test/subdir", false}, 6, false},
+		{"non-recoursive error", args{"../test/error", false}, 0, true},
 
-		{"recoursive test", args{"../../test", true}, 9, false},
-		{"recoursive subdir", args{"../../test/subdir", true}, 6, false},
-		{"recoursive error", args{"../../test/error", true}, 0, true},
+		{"recoursive test", args{"../test", true}, 9, false},
+		{"recoursive subdir", args{"../test/subdir", true}, 6, false},
+		{"recoursive error", args{"../test/error", true}, 0, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -81,9 +81,9 @@ func TestFilterMusicFiles(t *testing.T) {
 		args       args
 		wantLength int
 	}{
-		{"test", args{"../../test"}, 6},
-		{"subdir", args{"../../test/subdir"}, 4},
-		{"empty", args{"../../test/empty"}, 0},
+		{"test", args{"../test"}, 6},
+		{"subdir", args{"../test/subdir"}, 4},
+		{"empty", args{"../test/empty"}, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

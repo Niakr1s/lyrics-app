@@ -1,4 +1,4 @@
-package fs
+package lib
 
 import (
 	"fmt"
