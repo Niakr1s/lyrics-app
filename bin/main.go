@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"sync"
 
 	"github.com/niakr1s/lyricsgo/lib"
 )
@@ -113,17 +114,25 @@ func printSeparator() {
 }
 
 func doJob(settings Settings) error {
+	wg := sync.WaitGroup{}
 	for _, musicFilePath := range settings.MusicFilePaths {
-		fmt.Printf("Start search lyrics for %s\n", musicFilePath)
+		musicFilePath := musicFilePath
+		wg.Add(1)
 
-		query := path.Base(musicFilePath)
-		lyrics, err := lib.GetLyrics(query)
-		if err != nil {
-			fmt.Printf("Lyrics not found, reason: %v: %s\n", err, musicFilePath)
-		} else {
-			fmt.Printf("Lyrics found, len=%d: %s\n", len(lyrics), musicFilePath)
-		}
+		go func() {
+			defer wg.Done()
+
+			fmt.Printf("Start search lyrics for %s\n", musicFilePath)
+			query := path.Base(musicFilePath)
+			lyrics, err := lib.GetLyrics(query)
+			if err != nil {
+				fmt.Printf("Lyrics not found, reason: %v: %s\n", err, musicFilePath)
+			} else {
+				fmt.Printf("Lyrics found, len=%d: %s\n", len(lyrics), musicFilePath)
+			}
+		}()
 	}
+	wg.Wait()
 	return nil
 }
 
