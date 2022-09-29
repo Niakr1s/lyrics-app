@@ -45,11 +45,15 @@ func GetAllFilesFromDir(dirPath string, recoursive bool) ([]string, error) {
 	return res, nil
 }
 
+func IsMusicFile(filePath string) bool {
+	return strings.HasSuffix(filePath, ".mp3") || strings.HasSuffix(filePath, ".ogg")
+}
+
 func FilterMusicFiles(filePaths []string) []string {
 	res := []string{}
 
 	for _, filePath := range filePaths {
-		if strings.HasSuffix(filePath, ".mp3") || strings.HasSuffix(filePath, ".ogg") {
+		if IsMusicFile(filePath) {
 			res = append(res, filePath)
 		}
 	}
