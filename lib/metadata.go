@@ -46,6 +46,7 @@ func (w *FfmpegMetadataWriter) WriteMetadata(job WriteMetadataJob) (string, erro
 	cmd := exec.Command(w.ffmpegPath, args...)
 
 	if w.WithFfmpegOutput {
+		fmt.Printf("running cmd: %s", cmd)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
