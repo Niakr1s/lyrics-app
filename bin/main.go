@@ -45,19 +45,21 @@ type Settings struct {
 
 // Checks if app is ready to go. If has some troubles, panics.
 func makeSettings(args Args) (Settings, error) {
-	res := Settings{}
+	res := Settings{
+		InputFiles: []string{},
+		FfmpegCmd:  "",
+		Simulate:   args.Simulate,
+	}
 	var err error
 
 	args.InputPath, err = fs.ToAbs(args.InputPath)
 	if err != nil {
 		return res, err
 	}
-
 	stat, err := os.Stat(args.InputPath)
 	if err != nil {
 		return res, fmt.Errorf("couldn't get stat of input path %s: %v", args.InputPath, err)
 	}
-	res.InputFiles = []string{}
 	if stat.Mode().IsRegular() {
 		res.InputFiles = []string{args.InputPath}
 	} else if stat.Mode().IsDir() {
@@ -86,6 +88,7 @@ func makeSettings(args Args) (Settings, error) {
 	if err != nil {
 		log.Fatalf("no ffmpeg file in PATH: %v", err)
 	}
+
 	return res, nil
 }
 
