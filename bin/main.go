@@ -68,6 +68,7 @@ func makeSettings(args Args) (Settings, error) {
 	} else {
 		return res, fmt.Errorf("input path %s is nor regular file, nor directory", args.InputPath)
 	}
+	res.InputFiles = fs.FilterMusicFiles(res.InputFiles)
 
 	// checking ffmpeg
 	ffmpegCmds := []string{"ffmpeg", "ffmpeg.exe"}
