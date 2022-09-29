@@ -21,7 +21,8 @@ func makeOutputFilePath(inputFilePath string) string {
 }
 
 type FfmpegMetadataWriter struct {
-	ffmpegPath string
+	ffmpegPath       string
+	WithFfmpegOutput bool
 }
 
 func NewFfmpegMetadataWriter(ffmpegPath string) *FfmpegMetadataWriter {
@@ -42,6 +43,12 @@ func (w *FfmpegMetadataWriter) WriteMetadata(job WriteMetadataJob) (string, erro
 	}
 	args = append(args, "-c:a", "copy", outputFilePath, "-y")
 	cmd := exec.Command(w.ffmpegPath, args...)
+
+	if w.WithFfmpegOutput {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
+
 	err = cmd.Run()
 	if err != nil {
 		return outputFilePath, err

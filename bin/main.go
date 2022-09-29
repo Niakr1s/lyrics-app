@@ -138,7 +138,10 @@ func doJob(settings Settings) {
 		metadataJobs = append(metadataJobs, metadataJob)
 	}
 
-	metadataResults := lib.WriteMetadataAll(lib.NewFfmpegMetadataWriter(settings.FfmpegCmd), metadataJobs)
+	metadataWriter := lib.NewFfmpegMetadataWriter(settings.FfmpegCmd)
+	metadataWriter.WithFfmpegOutput = true
+
+	metadataResults := lib.WriteMetadataAll(metadataWriter, metadataJobs)
 	log.Printf("WriteMetadataResult: %s\n", metadataResults.Info())
 }
 
