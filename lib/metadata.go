@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"sync"
 )
 
@@ -17,7 +18,7 @@ func metadataSuffix() string {
 }
 
 func makeOutputFilePath(inputFilePath string) string {
-	return inputFilePath + metadataSuffix()
+	return path.Join(path.Dir(inputFilePath), path.Base(inputFilePath)+metadataSuffix()+path.Ext(inputFilePath))
 }
 
 type FfmpegMetadataWriter struct {
