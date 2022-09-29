@@ -43,6 +43,21 @@ type Settings struct {
 	Simulate bool
 }
 
+func (s Settings) PrintInfo() {
+	fmt.Printf("Got input: %d music files:\n", len(s.InputFiles))
+	for _, musicFilePath := range s.InputFiles {
+		fmt.Printf("\t%s\n", musicFilePath)
+	}
+	fmt.Printf("Found ffmpeg in %s\n", s.FfmpegCmd)
+
+	fmt.Printf("Simulate=%v, i will ", s.Simulate)
+	if s.Simulate {
+		fmt.Printf("simulate writing metadata to file.\n")
+	} else {
+		fmt.Printf("really write metadata to file.\n")
+	}
+}
+
 // Checks if app is ready to go. If has some troubles, panics.
 func makeSettings(args Args) (Settings, error) {
 	res := Settings{
@@ -99,5 +114,5 @@ func main() {
 		log.Fatalf("%v\n", err)
 	}
 
-	fmt.Printf("%+v | %+v\n", args, settings)
+	settings.PrintInfo()
 }
