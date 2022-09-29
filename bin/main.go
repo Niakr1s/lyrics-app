@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"sync"
 
 	"github.com/niakr1s/lyricsgo/lib"
 )
@@ -113,106 +112,34 @@ func printSeparator() {
 	fmt.Printf("-----\n")
 }
 
-type MetadataWriter interface {
-	// should return output file path or error
-	WriteMetadata(musicFilePath string, meta map[string]string) (string, error)
-}
+func doJob(settings Settings) {
+	lyricQueries := make([]string, len(settings.MusicFilePaths))
+	for i, musicFilePath := range settings.MusicFilePaths {
+		lyricQueries[i] = path.Base(musicFilePath)
+	}
+	lyricResults := lib.GetLyricsAll(lyricQueries)
+	log.Printf("GetLyricResult: %s\n", lyricResults.Info())
 
-type SuccessJob struct {
-	FileName string
-	Lyrics   string
-}
-
-type FailureJob struct {
-	FileName string
-	Error    error
-}
-
-type JobResult struct {
-	InputFiles   []string
-	SuccessFiles map[string]SuccessJob
-	FailureFiles map[string]FailureJob
-}
-
-func (r JobResult) String() string {
-	return fmt.Sprintf("Got %d input files, success: %d, failure: %d", len(r.InputFiles), len(r.SuccessFiles), len(r.FailureFiles))
-}
-
-func doJob(settings Settings) (JobResult, error) {
-	jobResult := JobResult{
-		InputFiles:   settings.MusicFilePaths,
-		SuccessFiles: map[string]SuccessJob{},
-		FailureFiles: map[string]FailureJob{},
+	if settings.Simulate {
+		return
 	}
 
-	var metadataWriter MetadataWriter = lib.NewFfmpegMetadataWriter(settings.FfmpegCmd)
-
-	wg := sync.WaitGroup{}
-	for _, musicFilePath := range settings.MusicFilePaths {
-		musicFilePath := musicFilePath
-		wg.Add(1)
-
-		go func() (err error) {
-			defer wg.Done()
-			defer func() {
-				if _, ok := jobResult.SuccessFiles[musicFilePath]; !ok {
-					jobResult.FailureFiles[musicFilePath] = FailureJob{
-						FileName: musicFilePath,
-						Error:    err,
-					}
-				}
-			}()
-
-			fmt.Printf("Start search lyrics for %s\n", musicFilePath)
-			query := path.Base(musicFilePath)
-			lyrics, err := lib.GetLyrics(query)
-			if err != nil {
-				fmt.Printf("Lyrics not found, reason: %v: %s\n", err, musicFilePath)
-				return
-			}
-
-			fmt.Printf("Lyrics found, len=%d: %s\n", len(lyrics), musicFilePath)
-			if settings.Simulate {
-				jobResult.SuccessFiles[musicFilePath] = SuccessJob{
-					FileName: musicFilePath,
-					Lyrics:   lyrics,
-				}
-				return
-			}
-
-			outputFilePath, err := metadataWriter.WriteMetadata(musicFilePath, map[string]string{
-				"Lyrics": lyrics,
-			})
-			defer os.Remove(outputFilePath) // just clean at the end
-
-			if err != nil {
-				fmt.Printf("Couldn't write metadata, reason: %v: %v\n", err, musicFilePath)
-				return
-			}
-
-			err = os.Remove(musicFilePath)
-			if err != nil {
-				fmt.Printf("Couldn't remove file, reason: %v: %v\n", err, musicFilePath)
-				return
-			}
-
-			err = os.Rename(outputFilePath, musicFilePath)
-			if err != nil {
-				fmt.Printf("Couldn't rename file, reason: %v: %v\n", err, outputFilePath)
-				return
-			}
-
-			fmt.Printf("Metadata write success: %v\n", musicFilePath)
-			jobResult.SuccessFiles[musicFilePath] = SuccessJob{
-				FileName: musicFilePath,
-				Lyrics:   lyrics,
-			}
-			return
-		}()
+	metadataJobs := []lib.WriteMetadataJob{}
+	for i, lyricJobResult := range lyricResults {
+		if lyricJobResult.Err != nil {
+			continue
+		}
+		metadataJob := lib.WriteMetadataJob{
+			MusicFilePath: settings.MusicFilePaths[i],
+			Meta: map[string]string{
+				"Lyrics": lyricJobResult.Lyrics,
+			},
+		}
+		metadataJobs = append(metadataJobs, metadataJob)
 	}
-	wg.Wait()
 
-	return jobResult, nil
+	metadataResults := lib.WriteMetadataAll(lib.NewFfmpegMetadataWriter(settings.FfmpegCmd), metadataJobs)
+	log.Printf("WriteMetadataResult: %s\n", metadataResults.Info())
 }
 
 func main() {
@@ -227,11 +154,7 @@ func main() {
 	printSeparator()
 	fmt.Printf("Start\n")
 
-	if result, err := doJob(settings); err != nil {
-		log.Fatalf("%v\n", err)
-	} else {
-		fmt.Printf("%s\n", result)
-	}
+	doJob(settings)
 
 	fmt.Printf("End\n")
 	printSeparator()
