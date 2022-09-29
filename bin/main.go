@@ -73,7 +73,7 @@ func makeSettings(args Args) (Settings, error) {
 	// checking ffmpeg
 	ffmpegCmds := []string{"ffmpeg", "ffmpeg.exe"}
 	for _, ffmpegCmd := range ffmpegCmds {
-		err := exec.Command("ffmpeg.exe", "-h").Run()
+		err := exec.Command(ffmpegCmd, "-h").Run()
 		if err == nil {
 			res.FfmpegCmd = ffmpegCmd
 			break
