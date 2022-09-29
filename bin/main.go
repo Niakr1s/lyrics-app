@@ -21,8 +21,8 @@ type Args struct {
 func getArgs() Args {
 	inputPath := flag.String("i", "", "Required! Path for input directory, or file. "+
 		"If it's directory, app will proceed all files in directory (check recoursive arg).")
-	recoursive := flag.Bool("recoursive", false, "Recoursive directory")
-	simulate := flag.Bool("simultate", false, "If turned on, app won't change any input file.")
+	recoursive := flag.Bool("r", false, "Recoursive directory")
+	simulate := flag.Bool("s", false, "If turned on, app won't change any input file.")
 	ffmpegPath := flag.String("ffmpeg", "", "Path to ffmpeg executable. If not given, tries to find ffmpeg executable in PATH.")
 
 	flag.Parse()
