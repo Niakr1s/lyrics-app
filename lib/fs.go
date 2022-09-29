@@ -50,13 +50,5 @@ func IsMusicFile(filePath string) bool {
 }
 
 func FilterMusicFiles(filePaths []string) []string {
-	res := []string{}
-
-	for _, filePath := range filePaths {
-		if IsMusicFile(filePath) {
-			res = append(res, filePath)
-		}
-	}
-
-	return res
+	return Filter(filePaths, IsMusicFile)
 }
