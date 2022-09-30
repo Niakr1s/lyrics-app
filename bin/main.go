@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -16,12 +15,12 @@ type Args struct {
 }
 
 func getArgs() Args {
-	inputPath := flag.String("i", "", "Required! Path to music file, or dir with music files.")
-
-	flag.Parse()
+	if len(os.Args) != 2 {
+		log.Fatalf("USAGE: app [input]\n\tWHERE [input] is path to music file or directory with music files")
+	}
 
 	return Args{
-		InputPath: *inputPath,
+		InputPath: os.Args[1],
 	}
 }
 
