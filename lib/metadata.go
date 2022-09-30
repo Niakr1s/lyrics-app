@@ -38,14 +38,14 @@ type WriteLyricsJob struct {
 type WriteLyricsResults []WriteLyricsAllResult
 
 func (r WriteLyricsResults) Info() string {
-	errorCount := 0
+	successCount := 0
 	for _, v := range r {
-		if v.Err != nil {
-			errorCount++
+		if v.Err == nil {
+			successCount++
 		}
 	}
 
-	return fmt.Sprintf("From %d music files got %d success and %d errors", len(r), len(r)-errorCount, errorCount)
+	return fmt.Sprintf("From %d music files got %d success", len(r), successCount)
 }
 
 type WriteLyricsAllResult struct {
