@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
 func ToAbs(inputPath string) (string, error) {
-	if !path.IsAbs(inputPath) {
+	if !filepath.IsAbs(inputPath) {
 		cwd, err := os.Getwd()
 		if err != nil {
 			return inputPath, fmt.Errorf("couldn't get current working directory: %v", err)

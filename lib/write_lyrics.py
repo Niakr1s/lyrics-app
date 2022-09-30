@@ -38,4 +38,4 @@ if __name__ == "__main__":
 
     writeLyrics(musicFilePath, lyrics)
 
-    print(musicFilePath, lyrics)
+    print("done write lyrics to", musicFilePath)

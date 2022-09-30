@@ -68,6 +68,7 @@ func makeSettings(args Args) (Settings, error) {
 	}
 	var err error
 
+	args.InputPath = path.Clean(args.InputPath)
 	args.InputPath, err = lib.ToAbs(args.InputPath)
 	if err != nil {
 		return res, err
@@ -124,25 +125,20 @@ func doJob(settings Settings) {
 		return
 	}
 
-	metadataJobs := []lib.WriteMetadataJob{}
+	lyricsJobs := []lib.WriteLyricsJob{}
 	for i, lyricJobResult := range lyricResults {
 		if lyricJobResult.Err != nil {
 			continue
 		}
-		metadataJob := lib.WriteMetadataJob{
+		lyricsJob := lib.WriteLyricsJob{
 			MusicFilePath: settings.MusicFilePaths[i],
-			Meta: map[string]string{
-				"Lyrics": lyricJobResult.Lyrics,
-			},
+			Lyrics:        lyricJobResult.Lyrics,
 		}
-		metadataJobs = append(metadataJobs, metadataJob)
+		lyricsJobs = append(lyricsJobs, lyricsJob)
 	}
 
-	metadataWriter := lib.NewFfmpegMetadataWriter(settings.FfmpegCmd)
-	metadataWriter.WithFfmpegOutput = true
-
-	metadataResults := lib.WriteMetadataAll(metadataWriter, metadataJobs)
-	log.Printf("WriteMetadataResult: %s\n", metadataResults.Info())
+	lyricsResults := lib.WriteLyricsAll(lyricsJobs, false)
+	log.Printf("Write lyrics result: %s\n", lyricsResults.Info())
 }
 
 func main() {
