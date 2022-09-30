@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/niakr1s/lyricsgo/lib"
@@ -16,7 +15,6 @@ type Args struct {
 	InputPath  string
 	Recoursive bool
 	Simulate   bool
-	FfmpegPath string
 }
 
 func getArgs() Args {
@@ -24,7 +22,6 @@ func getArgs() Args {
 		"If it's directory, app will proceed all files in directory (check recoursive arg).")
 	recoursive := flag.Bool("r", false, "Recoursive directory")
 	simulate := flag.Bool("s", false, "If turned on, app won't change any input file.")
-	ffmpegPath := flag.String("ffmpeg", "", "Path to ffmpeg executable. If not given, tries to find ffmpeg executable in PATH.")
 
 	flag.Parse()
 
@@ -32,14 +29,12 @@ func getArgs() Args {
 		InputPath:  *inputPath,
 		Recoursive: *recoursive,
 		Simulate:   *simulate,
-		FfmpegPath: *ffmpegPath,
 	}
 }
 
 type Settings struct {
 	// needed to check
 	MusicFilePaths []string
-	FfmpegCmd      string
 
 	Simulate bool
 }
@@ -49,7 +44,6 @@ func (s Settings) PrintInfo() {
 	for _, musicFilePath := range s.MusicFilePaths {
 		fmt.Printf("\t%s\n", musicFilePath)
 	}
-	fmt.Printf("Found ffmpeg in %s\n", s.FfmpegCmd)
 
 	fmt.Printf("Simulate=%v, i will ", s.Simulate)
 	if s.Simulate {
@@ -63,7 +57,6 @@ func (s Settings) PrintInfo() {
 func makeSettings(args Args) (Settings, error) {
 	res := Settings{
 		MusicFilePaths: []string{},
-		FfmpegCmd:      "",
 		Simulate:       args.Simulate,
 	}
 	var err error
@@ -88,23 +81,6 @@ func makeSettings(args Args) (Settings, error) {
 		return res, fmt.Errorf("input path %s is nor regular file, nor directory", args.InputPath)
 	}
 	res.MusicFilePaths = lib.FilterMusicFiles(res.MusicFilePaths)
-
-	// checking ffmpeg
-	ffmpegCmds := []string{args.FfmpegPath, "ffmpeg", "ffmpeg.exe"}
-	for _, ffmpegCmd := range ffmpegCmds {
-		err := exec.Command(ffmpegCmd, "-h").Run()
-		if err == nil {
-			res.FfmpegCmd = ffmpegCmd
-			break
-		}
-	}
-	if res.FfmpegCmd == "" {
-		return res, fmt.Errorf("no ffmpeg executable in path")
-	}
-
-	if err != nil {
-		log.Fatalf("no ffmpeg file in PATH: %v", err)
-	}
 
 	return res, nil
 }
