@@ -12,20 +12,16 @@ import (
 
 // command line args
 type Args struct {
-	InputPath  string
-	Recoursive bool
+	InputPath string
 }
 
 func getArgs() Args {
-	inputPath := flag.String("i", "", "Required! Path for input directory, or file. "+
-		"If it's directory, app will proceed all files in directory (check recoursive arg).")
-	recoursive := flag.Bool("r", false, "Recoursive directory")
+	inputPath := flag.String("i", "", "Required! Path to music file, or dir with music files.")
 
 	flag.Parse()
 
 	return Args{
-		InputPath:  *inputPath,
-		Recoursive: *recoursive,
+		InputPath: *inputPath,
 	}
 }
 
@@ -60,7 +56,7 @@ func makeSettings(args Args) (Settings, error) {
 	if stat.Mode().IsRegular() {
 		res.MusicFilePaths = []string{args.InputPath}
 	} else if stat.Mode().IsDir() {
-		res.MusicFilePaths, err = lib.GetAllFilesFromDir(args.InputPath, args.Recoursive)
+		res.MusicFilePaths, err = lib.GetAllFilesFromDir(args.InputPath, true)
 		if err != nil {
 			return res, err
 		}
