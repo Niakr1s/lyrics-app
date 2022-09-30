@@ -14,29 +14,24 @@ import (
 type Args struct {
 	InputPath  string
 	Recoursive bool
-	Simulate   bool
 }
 
 func getArgs() Args {
 	inputPath := flag.String("i", "", "Required! Path for input directory, or file. "+
 		"If it's directory, app will proceed all files in directory (check recoursive arg).")
 	recoursive := flag.Bool("r", false, "Recoursive directory")
-	simulate := flag.Bool("s", false, "If turned on, app won't change any input file.")
 
 	flag.Parse()
 
 	return Args{
 		InputPath:  *inputPath,
 		Recoursive: *recoursive,
-		Simulate:   *simulate,
 	}
 }
 
 type Settings struct {
 	// needed to check
 	MusicFilePaths []string
-
-	Simulate bool
 }
 
 func (s Settings) PrintInfo() {
@@ -44,20 +39,12 @@ func (s Settings) PrintInfo() {
 	for _, musicFilePath := range s.MusicFilePaths {
 		fmt.Printf("\t%s\n", musicFilePath)
 	}
-
-	fmt.Printf("Simulate=%v, i will ", s.Simulate)
-	if s.Simulate {
-		fmt.Printf("simulate writing metadata to file.\n")
-	} else {
-		fmt.Printf("really write metadata to file.\n")
-	}
 }
 
 // Checks if app is ready to go. If has some troubles, panics.
 func makeSettings(args Args) (Settings, error) {
 	res := Settings{
 		MusicFilePaths: []string{},
-		Simulate:       args.Simulate,
 	}
 	var err error
 
@@ -96,10 +83,6 @@ func doJob(settings Settings) {
 	}
 	lyricResults := lib.GetLyricsAll(lyricQueries)
 	log.Printf("GetLyricResult: %s\n", lyricResults.Info())
-
-	if settings.Simulate {
-		return
-	}
 
 	lyricsJobs := []lib.WriteLyricsJob{}
 	for i, lyricJobResult := range lyricResults {
