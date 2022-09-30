@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 
 	"github.com/niakr1s/lyricsgo/lib"
 )
@@ -68,7 +68,7 @@ func makeSettings(args Args) (Settings, error) {
 	}
 	var err error
 
-	args.InputPath = path.Clean(args.InputPath)
+	args.InputPath = filepath.Clean(args.InputPath)
 	args.InputPath, err = lib.ToAbs(args.InputPath)
 	if err != nil {
 		return res, err
@@ -116,7 +116,7 @@ func printSeparator() {
 func doJob(settings Settings) {
 	lyricQueries := make([]string, len(settings.MusicFilePaths))
 	for i, musicFilePath := range settings.MusicFilePaths {
-		lyricQueries[i] = path.Base(musicFilePath)
+		lyricQueries[i] = filepath.Base(musicFilePath)
 	}
 	lyricResults := lib.GetLyricsAll(lyricQueries)
 	log.Printf("GetLyricResult: %s\n", lyricResults.Info())

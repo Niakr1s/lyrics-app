@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"sync"
 )
 
@@ -23,7 +23,7 @@ func init() {
 		log.Fatalf("pip not found, please, install python version 3.10+: %v", err)
 	}
 
-	write_lyrics_py_filepath = path.Join(os.TempDir(), "set_lyrics.py")
+	write_lyrics_py_filepath = filepath.Join(os.TempDir(), "set_lyrics.py")
 	err = os.WriteFile(write_lyrics_py_filepath, []byte(write_lyrics_py), 0666)
 	if err != nil {
 		log.Fatalf("couldn't write %s", write_lyrics_py_filepath)
