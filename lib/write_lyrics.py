@@ -4,23 +4,23 @@ from mutagen.id3 import ID3, USLT
 from mutagen.oggvorbis import OggVorbis
 
 
-def setLyrics(musicFileName: str, lyrics: str):
+def writeLyrics(musicFileName: str, lyrics: str):
     ext = pathlib.Path(musicFileName).suffix
     if ext == ".mp3":
-        setLyricsMp3(musicFileName, lyrics)
+        writeLyricsMp3(musicFileName, lyrics)
     elif ext == ".ogg":
-        setLyricsOgg(musicFileName, lyrics)
+        writeLyricsOgg(musicFileName, lyrics)
     else:
         raise Exception("wrong extension, want .mp3 or .ogg")
 
 
-def setLyricsMp3(musicFileName: str, lyrics: str):
+def writeLyricsMp3(musicFileName: str, lyrics: str):
     audio = ID3(musicFileName)
     audio.add(USLT(lang='   ', desc='', text=lyrics))
     audio.save()
 
 
-def setLyricsOgg(musicFileName: str, lyrics: str):
+def writeLyricsOgg(musicFileName: str, lyrics: str):
     audio = OggVorbis(musicFileName)
     audio['lyrics'] = lyrics
     audio.save()
@@ -36,6 +36,6 @@ if __name__ == "__main__":
     musicFilePath = args.musicFilePath
     lyrics = args.lyrics
 
-    setLyrics(musicFilePath, lyrics)
+    writeLyrics(musicFilePath, lyrics)
 
     print(musicFilePath, lyrics)
