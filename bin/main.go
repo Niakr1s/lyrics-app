@@ -1,61 +1,40 @@
 package main
 
 import (
-	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
-	"os/exec"
-	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/niakr1s/lyricsgo/lib"
 )
 
 // command line args
 type Args struct {
-	InputPath  string
-	Recoursive bool
-	Simulate   bool
-	FfmpegPath string
+	InputPath string
 }
 
 func getArgs() Args {
-	inputPath := flag.String("i", "", "Required! Path for input directory, or file. "+
-		"If it's directory, app will proceed all files in directory (check recoursive arg).")
-	recoursive := flag.Bool("r", false, "Recoursive directory")
-	simulate := flag.Bool("s", false, "If turned on, app won't change any input file.")
-	ffmpegPath := flag.String("ffmpeg", "", "Path to ffmpeg executable. If not given, tries to find ffmpeg executable in PATH.")
-
-	flag.Parse()
+	if len(os.Args) != 2 {
+		log.Fatalf("USAGE: app [input]\n\tWHERE [input] is path to music file or directory with music files")
+	}
 
 	return Args{
-		InputPath:  *inputPath,
-		Recoursive: *recoursive,
-		Simulate:   *simulate,
-		FfmpegPath: *ffmpegPath,
+		InputPath: os.Args[1],
 	}
 }
 
 type Settings struct {
 	// needed to check
 	MusicFilePaths []string
-	FfmpegCmd      string
-
-	Simulate bool
 }
 
 func (s Settings) PrintInfo() {
-	fmt.Printf("Got input: %d music files:\n", len(s.MusicFilePaths))
+	log.Printf("Got input: %d music files:\n", len(s.MusicFilePaths))
 	for _, musicFilePath := range s.MusicFilePaths {
-		fmt.Printf("\t%s\n", musicFilePath)
-	}
-	fmt.Printf("Found ffmpeg in %s\n", s.FfmpegCmd)
-
-	fmt.Printf("Simulate=%v, i will ", s.Simulate)
-	if s.Simulate {
-		fmt.Printf("simulate writing metadata to file.\n")
-	} else {
-		fmt.Printf("really write metadata to file.\n")
+		log.Printf("\t%s\n", musicFilePath)
 	}
 }
 
@@ -63,11 +42,10 @@ func (s Settings) PrintInfo() {
 func makeSettings(args Args) (Settings, error) {
 	res := Settings{
 		MusicFilePaths: []string{},
-		FfmpegCmd:      "",
-		Simulate:       args.Simulate,
 	}
 	var err error
 
+	args.InputPath = filepath.Clean(args.InputPath)
 	args.InputPath, err = lib.ToAbs(args.InputPath)
 	if err != nil {
 		return res, err
@@ -79,7 +57,7 @@ func makeSettings(args Args) (Settings, error) {
 	if stat.Mode().IsRegular() {
 		res.MusicFilePaths = []string{args.InputPath}
 	} else if stat.Mode().IsDir() {
-		res.MusicFilePaths, err = lib.GetAllFilesFromDir(args.InputPath, args.Recoursive)
+		res.MusicFilePaths, err = lib.GetAllFilesFromDir(args.InputPath, true)
 		if err != nil {
 			return res, err
 		}
@@ -88,65 +66,62 @@ func makeSettings(args Args) (Settings, error) {
 	}
 	res.MusicFilePaths = lib.FilterMusicFiles(res.MusicFilePaths)
 
-	// checking ffmpeg
-	ffmpegCmds := []string{args.FfmpegPath, "ffmpeg", "ffmpeg.exe"}
-	for _, ffmpegCmd := range ffmpegCmds {
-		err := exec.Command(ffmpegCmd, "-h").Run()
-		if err == nil {
-			res.FfmpegCmd = ffmpegCmd
-			break
-		}
-	}
-	if res.FfmpegCmd == "" {
-		return res, fmt.Errorf("no ffmpeg executable in path")
-	}
-
-	if err != nil {
-		log.Fatalf("no ffmpeg file in PATH: %v", err)
-	}
-
 	return res, nil
 }
 
 func printSeparator() {
-	fmt.Printf("-----\n")
+	log.Printf("-----\n")
 }
 
 func doJob(settings Settings) {
 	lyricQueries := make([]string, len(settings.MusicFilePaths))
 	for i, musicFilePath := range settings.MusicFilePaths {
-		lyricQueries[i] = path.Base(musicFilePath)
+		lyricQueries[i] = filepath.Base(musicFilePath)
 	}
 	lyricResults := lib.GetLyricsAll(lyricQueries)
 	log.Printf("GetLyricResult: %s\n", lyricResults.Info())
 
-	if settings.Simulate {
-		return
-	}
-
-	metadataJobs := []lib.WriteMetadataJob{}
+	lyricsJobs := []lib.WriteLyricsJob{}
 	for i, lyricJobResult := range lyricResults {
 		if lyricJobResult.Err != nil {
 			continue
 		}
-		metadataJob := lib.WriteMetadataJob{
+		lyricsJob := lib.WriteLyricsJob{
 			MusicFilePath: settings.MusicFilePaths[i],
-			Meta: map[string]string{
-				"Lyrics": lyricJobResult.Lyrics,
-			},
+			Lyrics:        lyricJobResult.Lyrics,
 		}
-		metadataJobs = append(metadataJobs, metadataJob)
+		lyricsJobs = append(lyricsJobs, lyricsJob)
 	}
 
-	metadataWriter := lib.NewFfmpegMetadataWriter(settings.FfmpegCmd)
-	metadataWriter.WithFfmpegOutput = true
+	lyricsResults := lib.WriteLyricsAll(lyricsJobs, false)
+	log.Printf("Write lyrics result: %s\n", lyricsResults.Info())
+}
 
-	metadataResults := lib.WriteMetadataAll(metadataWriter, metadataJobs)
-	log.Printf("WriteMetadataResult: %s\n", metadataResults.Info())
+func setLogger(filename string) io.Closer {
+	fi, err := os.Stat(filename)
+	if err != nil {
+		log.Fatalf("error getting stat for file %v: %v", filename, err)
+	}
+
+	var logFilePath string
+	if fi.Mode().IsRegular() {
+		ext := filepath.Ext(filename)
+		logFilePath = filepath.Join(strings.TrimSuffix(filename, ext) + ".log")
+	} else if fi.Mode().IsDir() {
+		logFilePath = filepath.Join(filename, "lyrics.log")
+	}
+	f, err := os.OpenFile(logFilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	log.SetOutput(f)
+	return f
 }
 
 func main() {
 	args := getArgs()
+	defer setLogger(args.InputPath).Close()
+
 	settings, err := makeSettings(args)
 	if err != nil {
 		log.Fatalf("%v\n", err)
@@ -155,10 +130,10 @@ func main() {
 	settings.PrintInfo()
 
 	printSeparator()
-	fmt.Printf("Start\n")
+	log.Printf("Start\n")
 
 	doJob(settings)
 
-	fmt.Printf("End\n")
+	log.Printf("End\n")
 	printSeparator()
 }

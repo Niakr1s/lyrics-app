@@ -1,117 +1,84 @@
 package lib
 
 import (
+	_ "embed"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"sync"
 )
 
-type MetadataWriter interface {
-	// should return output file path or error
-	WriteMetadata(WriteMetadataJob) (string, error)
-}
+//go:embed write_lyrics.py
+var write_lyrics_py string
+var write_lyrics_py_filepath string
 
-func metadataSuffix() string {
-	return ".metadata"
-}
+func init() {
+	var err error
 
-func makeOutputFilePath(inputFilePath string) string {
-	return path.Join(path.Dir(inputFilePath), path.Base(inputFilePath)+metadataSuffix()+path.Ext(inputFilePath))
-}
-
-type FfmpegMetadataWriter struct {
-	ffmpegPath       string
-	WithFfmpegOutput bool
-}
-
-func NewFfmpegMetadataWriter(ffmpegPath string) *FfmpegMetadataWriter {
-	return &FfmpegMetadataWriter{ffmpegPath: ffmpegPath}
-}
-
-// returns output filePath and error
-func (w *FfmpegMetadataWriter) WriteMetadata(job WriteMetadataJob) (string, error) {
-	musicFilePath, err := ToAbs(job.MusicFilePath)
+	// preinstall mutagen
+	err = exec.Command("pip", "install", "mutagen").Run()
 	if err != nil {
-		return "", err
-	}
-	outputFilePath := makeOutputFilePath(musicFilePath)
-
-	args := []string{"-i", musicFilePath}
-	for k, v := range job.Meta {
-		args = append(args, "-metadata:s:0", fmt.Sprintf("%s=%s", k, v))
-	}
-	args = append(args, "-c:a", "copy", outputFilePath, "-y")
-	cmd := exec.Command(w.ffmpegPath, args...)
-
-	if w.WithFfmpegOutput {
-		fmt.Printf("running cmd: %s", cmd)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		log.Fatalf("pip not found, please, install python version 3.10+: %v", err)
 	}
 
-	err = cmd.Run()
+	write_lyrics_py_filepath = filepath.Join(os.TempDir(), "set_lyrics.py")
+	err = os.WriteFile(write_lyrics_py_filepath, []byte(write_lyrics_py), 0666)
 	if err != nil {
-		return outputFilePath, err
+		log.Fatalf("couldn't write %s", write_lyrics_py_filepath)
 	}
-
-	return outputFilePath, nil
 }
 
-type WriteMetadataJob struct {
+type WriteLyricsJob struct {
 	MusicFilePath string
-	Meta          map[string]string
+	Lyrics        string
 }
 
-type WriteMetadataAllResults []WriteMetadataAllResult
+type WriteLyricsResults []WriteLyricsAllResult
 
-func (r WriteMetadataAllResults) Info() string {
-	errorCount := 0
+func (r WriteLyricsResults) Info() string {
+	successCount := 0
 	for _, v := range r {
-		if v.Err != nil {
-			errorCount++
+		if v.Err == nil {
+			successCount++
 		}
 	}
 
-	return fmt.Sprintf("From %d music files got %d success and %d errors", len(r), len(r)-errorCount, errorCount)
+	return fmt.Sprintf("From %d music files got %d success", len(r), successCount)
 }
 
-type WriteMetadataAllResult struct {
+type WriteLyricsAllResult struct {
 	MusicFilePath string
 	Err           error
 }
 
 // Garantees to reserve input order.
-func WriteMetadataAll(writer MetadataWriter, jobs []WriteMetadataJob) WriteMetadataAllResults {
-	results := make(WriteMetadataAllResults, len(jobs))
+func WriteLyricsAll(jobs []WriteLyricsJob, withOutput bool) WriteLyricsResults {
+	results := make(WriteLyricsResults, len(jobs))
 
 	wg := sync.WaitGroup{}
+	semaphore := make(chan struct{}, 10)
 	for i, job := range jobs {
 		i := i
 		job := job
-		jobResult := WriteMetadataAllResult{
+		jobResult := WriteLyricsAllResult{
 			MusicFilePath: job.MusicFilePath,
 		}
 		wg.Add(1)
 
 		go func() {
+			semaphore <- struct{}{}
 			defer wg.Done()
 			defer func() {
 				results[i] = jobResult
+				<-semaphore
 			}()
 
-			outputFilePath, err := writer.WriteMetadata(job)
-			defer os.Remove(outputFilePath) // just clean at the end
+			err := WriteLyrics(job.MusicFilePath, job.Lyrics, withOutput)
 
 			if err != nil {
-				jobResult.Err = fmt.Errorf("couldn't write metadata, reason: %v: %v => %v", err, job.MusicFilePath, outputFilePath)
-				return
-			}
-
-			err = os.Rename(outputFilePath, job.MusicFilePath)
-			if err != nil {
-				jobResult.Err = fmt.Errorf("couldn't move file, reason: %v: %v => %v", err, outputFilePath, job.MusicFilePath)
+				jobResult.Err = fmt.Errorf("couldn't write lyrics for file %v, reason: %v", job.MusicFilePath, err)
 				return
 			}
 		}()
@@ -119,4 +86,19 @@ func WriteMetadataAll(writer MetadataWriter, jobs []WriteMetadataJob) WriteMetad
 	wg.Wait()
 
 	return results
+}
+
+func WriteLyrics(filepath string, lyrics string, withOutput bool) error {
+	cmd := exec.Command("python", write_lyrics_py_filepath, filepath, lyrics)
+
+	if withOutput {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
+
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("error while writing lyrics to %v, lyrics len %d, reason: %v", filepath, len(lyrics), err)
+	}
+	return nil
 }

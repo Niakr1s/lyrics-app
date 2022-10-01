@@ -34,17 +34,13 @@ type GetLyricsAllResults []GetLyricsAllResult
 
 func (r GetLyricsAllResults) Info() string {
 	lyricCount := 0
-	errorCount := 0
 	for _, v := range r {
 		if v.Lyrics != "" {
 			lyricCount++
 		}
-		if v.Err != nil {
-			errorCount++
-		}
 	}
 
-	return fmt.Sprintf("From %d queries got %d lyrics and %d errors", len(r), lyricCount, errorCount)
+	return fmt.Sprintf("From %d queries got %d lyrics", len(r), lyricCount)
 }
 
 type GetLyricsAllResult struct {
@@ -58,6 +54,7 @@ func GetLyricsAll(queries []string) GetLyricsAllResults {
 	results := make(GetLyricsAllResults, len(queries))
 
 	wg := sync.WaitGroup{}
+	semaphore := make(chan struct{}, 10)
 	for i, query := range queries {
 		i := i
 		query := query
@@ -70,7 +67,10 @@ func GetLyricsAll(queries []string) GetLyricsAllResults {
 			defer wg.Done()
 			defer func() {
 				results[i] = res
+				<-semaphore
 			}()
+
+			semaphore <- struct{}{}
 
 			lyrics, err := GetLyrics(query)
 			if err != nil {

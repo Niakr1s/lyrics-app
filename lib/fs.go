@@ -3,19 +3,19 @@ package lib
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 )
 
 func ToAbs(inputPath string) (string, error) {
-	if !path.IsAbs(inputPath) {
+	if !filepath.IsAbs(inputPath) {
 		cwd, err := os.Getwd()
 		if err != nil {
 			return inputPath, fmt.Errorf("couldn't get current working directory: %v", err)
 		}
-		inputPath = path.Join(cwd, inputPath)
+		inputPath = filepath.Join(cwd, inputPath)
 	}
-	inputPath = path.Clean(inputPath)
+	inputPath = filepath.Clean(inputPath)
 	return inputPath, nil
 }
 
@@ -33,9 +33,9 @@ func GetAllFilesFromDir(dirPath string, recoursive bool) ([]string, error) {
 	}
 	for _, dirItem := range dirItems {
 		if dirItem.Type().IsRegular() {
-			res = append(res, path.Clean(path.Join(dirPath, dirItem.Name())))
+			res = append(res, filepath.Clean(filepath.Join(dirPath, dirItem.Name())))
 		} else if dirItem.IsDir() && recoursive {
-			subDirItems, err := GetAllFilesFromDir(path.Join(dirPath, dirItem.Name()), true)
+			subDirItems, err := GetAllFilesFromDir(filepath.Join(dirPath, dirItem.Name()), true)
 			if err != nil {
 				return nil, err
 			}

@@ -1,7 +1,7 @@
 package lib
 
 import (
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -16,11 +16,10 @@ func TestToAbs(t *testing.T) {
 		wantSuffix string
 		wantErr    bool
 	}{
-		{"empty", args{""}, "lyrics-app/lib", false},
-		{"current", args{"."}, "lyrics-app/lib", false},
-		{"test", args{"test"}, "lyrics-app/lib/test", false},
-		{"up", args{"../test"}, "lyrics-app/test", false},
-		{"root", args{"/test"}, "/test", false},
+		{"empty", args{""}, filepath.Join("lyrics-app", "lib"), false},
+		{"current", args{"."}, filepath.Join("lyrics-app", "lib"), false},
+		{"test", args{"test"}, filepath.Join("lyrics-app", "lib", "test"), false},
+		{"up", args{"../test"}, filepath.Join("lyrics-app", "test"), false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -29,7 +28,7 @@ func TestToAbs(t *testing.T) {
 				t.Errorf("ToAbs() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !path.IsAbs(got) {
+			if !filepath.IsAbs(got) {
 				t.Errorf("%v is not Abs", got)
 			}
 			if !strings.HasSuffix(got, tt.wantSuffix) {
@@ -83,7 +82,6 @@ func TestFilterMusicFiles(t *testing.T) {
 	}{
 		{"test", args{"../test"}, 6},
 		{"subdir", args{"../test/subdir"}, 4},
-		{"empty", args{"../test/empty"}, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
