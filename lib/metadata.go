@@ -58,6 +58,7 @@ func WriteLyricsAll(jobs []WriteLyricsJob, withOutput bool) WriteLyricsResults {
 	results := make(WriteLyricsResults, len(jobs))
 
 	wg := sync.WaitGroup{}
+	semaphore := make(chan struct{}, 10)
 	for i, job := range jobs {
 		i := i
 		job := job
@@ -67,9 +68,11 @@ func WriteLyricsAll(jobs []WriteLyricsJob, withOutput bool) WriteLyricsResults {
 		wg.Add(1)
 
 		go func() {
+			semaphore <- struct{}{}
 			defer wg.Done()
 			defer func() {
 				results[i] = jobResult
+				<-semaphore
 			}()
 
 			err := WriteLyrics(job.MusicFilePath, job.Lyrics, withOutput)

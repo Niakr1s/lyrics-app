@@ -54,6 +54,7 @@ func GetLyricsAll(queries []string) GetLyricsAllResults {
 	results := make(GetLyricsAllResults, len(queries))
 
 	wg := sync.WaitGroup{}
+	semaphore := make(chan struct{}, 10)
 	for i, query := range queries {
 		i := i
 		query := query
@@ -66,7 +67,10 @@ func GetLyricsAll(queries []string) GetLyricsAllResults {
 			defer wg.Done()
 			defer func() {
 				results[i] = res
+				<-semaphore
 			}()
+
+			semaphore <- struct{}{}
 
 			lyrics, err := GetLyrics(query)
 			if err != nil {

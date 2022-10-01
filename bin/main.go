@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/niakr1s/lyricsgo/lib"
 )
@@ -30,9 +32,9 @@ type Settings struct {
 }
 
 func (s Settings) PrintInfo() {
-	fmt.Printf("Got input: %d music files:\n", len(s.MusicFilePaths))
+	log.Printf("Got input: %d music files:\n", len(s.MusicFilePaths))
 	for _, musicFilePath := range s.MusicFilePaths {
-		fmt.Printf("\t%s\n", musicFilePath)
+		log.Printf("\t%s\n", musicFilePath)
 	}
 }
 
@@ -68,7 +70,7 @@ func makeSettings(args Args) (Settings, error) {
 }
 
 func printSeparator() {
-	fmt.Printf("-----\n")
+	log.Printf("-----\n")
 }
 
 func doJob(settings Settings) {
@@ -95,8 +97,31 @@ func doJob(settings Settings) {
 	log.Printf("Write lyrics result: %s\n", lyricsResults.Info())
 }
 
+func setLogger(filename string) io.Closer {
+	fi, err := os.Stat(filename)
+	if err != nil {
+		log.Fatalf("error getting stat for file %v: %v", filename, err)
+	}
+
+	var logFilePath string
+	if fi.Mode().IsRegular() {
+		ext := filepath.Ext(filename)
+		logFilePath = filepath.Join(strings.TrimSuffix(filename, ext) + ".log")
+	} else if fi.Mode().IsDir() {
+		logFilePath = filepath.Join(filename, "lyrics.log")
+	}
+	f, err := os.OpenFile(logFilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	log.SetOutput(f)
+	return f
+}
+
 func main() {
 	args := getArgs()
+	defer setLogger(args.InputPath).Close()
+
 	settings, err := makeSettings(args)
 	if err != nil {
 		log.Fatalf("%v\n", err)
@@ -105,10 +130,10 @@ func main() {
 	settings.PrintInfo()
 
 	printSeparator()
-	fmt.Printf("Start\n")
+	log.Printf("Start\n")
 
 	doJob(settings)
 
-	fmt.Printf("End\n")
+	log.Printf("End\n")
 	printSeparator()
 }
